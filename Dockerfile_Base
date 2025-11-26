@@ -1,0 +1,89 @@
+# Use uma imagem base do Python
+FROM python:3.11-slim
+
+WORKDIR /Backend/API
+
+COPY requirements.txt .
+
+# Create a python virtual environment
+RUN python -m venv venv
+
+##############################################
+#    API
+##############################################
+
+# Add venv to $PATH
+ENV PATH="/Backend/API/venv/bin:$PATH"
+
+# Activate venv and install dependencies
+RUN \
+    ./venv/bin/pip install --upgrade pip && \
+    ./venv/bin/pip install -r requirements.txt
+
+##############################################
+#    FACE RECOGNITION
+##############################################
+
+WORKDIR /Backend/FaceRecognition
+
+# Copy face recognition project
+COPY face-recognition/ .
+
+# Install face-recognition dependencies
+RUN \
+    # Install dependencies
+    apt update && \
+    apt install -y \
+    build-essential \
+    wget \
+    cmake \
+    bzip2 \
+    g++ \
+    pkg-config \
+    ninja-build \
+    libbrotli-dev \
+    libx11-dev \ 
+    libopencv-dev \
+    libboost-all-dev \
+    libjxl-dev \
+    libavdevice-dev \
+    libavfilter-dev \
+    libavformat-dev \
+    libavcodec-dev \
+    libswresample-dev \
+    libswscale-dev \
+    libavutil-dev \
+    libopenblas-dev \
+    liblapack-dev \
+    libx11-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libgif-dev \
+    libwebp-dev \
+    libopencv-dev
+    
+# Build external dependencies
+RUN \
+    # libjxl
+    cd /Backend/FaceRecognition/external/libjxl && \
+    mkdir -p build && \
+    cmake -B build -S . -G Ninja -DJPEGXL_ENABLE_SKCMS=ON -DJPEGXL_FORCE_SYSTEM_BROTLI=ON && \
+    cmake --build build && \
+    cmake --install build && \
+    \
+    # dlib
+    cd /Backend/FaceRecognition/external/dlib && \
+    mkdir -p build && \
+    cmake -B build -S . -DDLIB_USE_CUDA=OFF -DUSE_AVX_INSTRUCTIONS=ON && \ 
+    cmake --build build --config Release && \
+    cmake --install build && \
+    \
+    # Add /usr/local/lib to libs path and update ldconfig cache
+    echo "/usr/local/lib" | tee /etc/ld.so.conf.d/local.conf && \
+    ldconfig
+
+# Build executable
+RUN \
+    mkdir -p build bin && \
+    cmake -B build -S . && \
+    cmake --build build

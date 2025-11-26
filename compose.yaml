@@ -1,0 +1,14 @@
+services:
+  
+  # ==========================
+  #   Backend
+  # ==========================
+  backend-build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: thiagomlv/faceid-backend:latest
+    container_name: backend
+    ports:
+      - "8000:8000"
+    tty: true
